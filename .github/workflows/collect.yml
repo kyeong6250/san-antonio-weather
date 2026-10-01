@@ -1,0 +1,34 @@
+name: Collect daily weather
+
+on:
+  schedule:
+    - cron: "15 12 * * *" # 07:15 in San Antonio (CDT), after the previous day is complete
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch new days
+        run: python collect.py
+
+      - name: Commit snapshot
+        run: |
+          git config --local user.email "47836315+kyeong6250@users.noreply.github.com"
+          git config --local user.name "kyeong6250"
+          git add data/daily.csv
+          if git diff --cached --quiet; then
+            echo "Nothing new to commit."
+            exit 0
+          fi
+          git commit -m "data: daily snapshot $(tail -n 1 data/daily.csv | cut -d, -f1) (automated)"
+          git push
